@@ -1,0 +1,34 @@
+# imports that need installation:
+#    pip install deeproc scikit-learn numpy pandas scipy
+deeproc
+scikit-learn  # for sklearn
+scipy
+numpy
+pandas
+pickle
+imblearn
+xgboost
+catboost
+tabpfn
+regex
+hyperopt
+
+# imports from built-in packages:
+#   matplotlib
+#   os
+#   system
+#   sys
+#   signal
+#   warnings
+#   time
+#   math
+
+# imports from source in this folder:
+#   acLogging
+#   acCustomKernels
+#   deepROC2
+#   do_pAUCc
+#   getPDF
+#   transcript
+#   progress_transcript
+#   loess
