@@ -2,6 +2,9 @@
 
 Note: there is no data or personally identifiable information in this package
 
+## Install the required packages
+- pip install -r requirements.txt
+
 ## Learn the model with 10x10 cross-validation
 - Obtain TB.csv and put it in the input-data directory
 - Create an output folder
