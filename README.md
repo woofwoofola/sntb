@@ -1,6 +1,6 @@
 # Instructions to use this package for the Smear Negative Tuberculosis paper
 
-Note: there are no data or personally identifiable information in this package
+Note: there are no data or personally identifiable information in this package.  
 Note: Except for TabPFN, all of the models used are not deep learning models.
 TabPFN is a pre-trained 12-layer transformer model.
 
