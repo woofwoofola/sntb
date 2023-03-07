@@ -1,6 +1,6 @@
 # Instructions to use this package for the Smear Negative Tuberculosis paper
 
-Note: there is no data or personally identifiable information in this package
+Note: there are no data or personally identifiable information in this package
 
 ## Install the required packages
 - pip install -r requirements.txt
