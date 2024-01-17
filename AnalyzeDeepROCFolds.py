@@ -16,21 +16,25 @@
 #
 # Revision history:
 #   Original Python version by Andre Carrington, 2021
-testNum           = 2
-model             = 'svcOISVpos'
+testNum           = 17
+model             = 'logr'
+
+resultsv2         = True
+
 iterations        = 100 # except for the next clause...
 if model == 'resnet1013D':  # matlab v2021a only captures the last iteration
     iterations    = 1
 if model == 'logr' or model == 'tpfn':  # these methods have only 1 iteration
     iterations    = 1
 iterationToMeasure= None
-measureToAnalyze = 'avgSens.2'  # 0-indexed
+measureToAnalyze = 'AUCn_i.3'  # 0-indexed
+#measureToAnalyze = 'avgSens.2'  # 0-indexed
 #measureToAnalyze = 'AUCn_i.2'  # 0-indexed
-totalFolds        = 100  # 10x10CV
+totalFolds        = 1  # 10x10CV
 groupAxis         = 'TPR'
 #groupAxis         = 'FPR'
 #groups            = [[0, 0.15], [0.15, 1], [0, 1]]
-groups            = [[0, 0.65], [0.65, 0.85], [0.85, 1], [0, 1]]
+groups            = [[0, 0.43], [0.43, 0.85], [0.85, 1], [0, 1]]
 #group            = [[0, 1], [0, 0.65], [0.65, 0.85], [0.85, 1]]
 costs             = dict(cFP=1, cFN=5, cTP=0, cTN=0, costsAreRates=False)
 doPlot            = True
@@ -73,6 +77,8 @@ class AnalyzeDeepROCFolds(object):
 
         self.findOrMakeWholeGroup()
 
+        # cannot add the best iteration (iText which comes up later) at this time to the log filename
+        # because data have to be loaded and the best iteration determined first
         logfn = f'output/AnalyzeDeepROCFolds_{self.testNum:3d}_{self.model}.txt'
         transcript.start(logfn)
         self.deepROC = DeepROC.DeepROC()
@@ -241,7 +247,7 @@ class AnalyzeDeepROCFolds(object):
         else:
             # Need to get the iteration specified
             self.labelScoreFile = open(f'output/labelScore_{self.testNum:03d}_{self.model}.pkl', 'rb')
-            for i in range(0, self.iterationToMeasure):
+            for i in range(0, self.iterationToMeasure+1):
                 iteration_a      = pickle.load(self.labelScoreFile)
             #endfor
             self.labelScoreFile.close()
