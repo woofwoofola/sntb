@@ -109,8 +109,10 @@ cat_features = getCategoricalIndices(vars, base_categories + more_categories + m
                                      more_categories_SDH_need_imputation + varCRP3)
 
 main_size = 218   # complete-case-analysis
+test_size = 109   # complete-case-analysis
 # main_size = 228     # imputed
 print(f'main_size:            {main_size} = training + validation')
+print(f'test_size:            {test_size} = validation')
 
 # dataset_name   = 'German_Breast_cancer_Study_Group'
 # data_fn        = 'input-data/gbsg_X.csv'
@@ -216,12 +218,15 @@ print(f'type_to_optimize:     {type_to_optimize}')
 print(f'deepROC_groups:       {deepROC_groups}')
 print(f'groupAxis:            {groupAxis}')
 
-cv_option             = 'CV'   # CV, Stratified CV, Bootstrap
-k_folds               = 10
-repetition            = 10      # >1 results in RepeatedCV, RepeatedStratifiedCV
-total_folds           = repetition * k_folds
+cv_option             = 'Stratified Split'   # CV, Stratified CV, Bootstrap, Split, Stratified Split
+if cv_option == 'Split' or cv_option == 'Stratified Split':
+    k_test_folds      = 1  # fixed, do not change
+else:
+    k_test_folds      = 10  # set me
+repetition            = 10  # >1 results in RepeatedCV, RepeatedStratifiedCV, Split, Stratified Split
+total_folds           = repetition * k_test_folds
 print(f'cv_option:            {cv_option}')
-print(f'k_folds:              {k_folds}')
+print(f'k_test_folds:         {k_test_folds}')
 print(f'repetition:           {repetition}')
 print(f'total_folds:          {total_folds}')
 
@@ -243,8 +248,9 @@ print(f'hyperparameter_search_mode:    {hyperparameter_search_mode}')
 # which_methods    = ['logr', 'plogrE2', 'plogr1']
 # which_methods    = ['svcMSig', 'cb']
 # which_methods    = ['tpfn']
-which_methods    = ['logr', 'svcOISVpos']
-#which_methods    = ['svcLin', 'logr', 'svcMSig', 'plogrE2', 'plogr2', 'svcOISVgc']
+#which_methods    = ['logr', 'plogr1', 'svcLin']
+#which_methods    = ['logr', 'svcOISVpos']
+which_methods    = ['svcLin', 'logr', 'svcMSig', 'plogrE2', 'plogr2', 'svcOISVgc', 'svcPwr1']
 #which_methods    = ['logr', 'plogr1', 'svcSigN', 'tpfn', 'rf1', 'svcPwr1']
 #which_methods    = ['logr', 'svcRBF', 'xgb1', 'cb']
 #which_methods    = ['logr', 'plogr1', 'svcMSig', 'rf1', 'svcOISVgc', 'svcSigN', 'tpfn', 'svcPwr1', 'xgb1', 'cb']
@@ -442,23 +448,23 @@ else:
 #    #   option I: repeated CV, e.g. 3 x 10CV = 30 folds
 
 # Fold option 1
+X_train_df = [None] * total_folds
+y_train_s  = [None] * total_folds
+X_val_df   = [None] * total_folds
+y_val_s    = [None] * total_folds
+
 if cv_option == 'CV':
     if repetition > 1:
         print('Making training/validation sets with repeatedKFold (CV).')
         from sklearn.model_selection import RepeatedKFold
-        kf = RepeatedKFold(n_splits=k_folds, n_repeats=repetition, random_state=split_random_state)
+        kf = RepeatedKFold(n_splits=k_test_folds, n_repeats=repetition, random_state=split_random_state)
         #kf.get_n_splits(X_main_df)
     else:
         print('Making training/validation sets with KFold (CV)')
         from sklearn.model_selection import KFold
-        kf = KFold(n_splits=k_folds, random_state=split_random_state, shuffle=True)
+        kf = KFold(n_splits=k_test_folds, random_state=split_random_state, shuffle=True)
         #kf.get_n_splits(X_main_df)
     #endif
-
-    X_train_df = [None] * total_folds
-    y_train_s  = [None] * total_folds
-    X_val_df   = [None] * total_folds
-    y_val_s    = [None] * total_folds
 
     i = 0
     for train_index, val_index in kf.split(X_main_df):
@@ -482,6 +488,12 @@ elif cv_option == 'Stratified CV':
         # RepeatedStratifiedKFold
     #endif
 
+elif cv_option == 'Split' or cv_option == 'Stratified Split':
+    from sklearn.model_selection import train_test_split
+    for i in range(0, total_folds):
+        X_train_df[i], X_val_df[i], y_train_s[i], y_val_s[i] = train_test_split(X_main_df, y_main_s, test_size=test_size, random_state=split_random_state+i)
+    #endfor
+
 elif cv_option == 'Bootstrap':
     print('Making training/validation sets with resample (Bootstrap)')
     # Code here adapted from:
@@ -489,7 +501,7 @@ elif cv_option == 'Bootstrap':
     from sklearn.utils import resample
     for i in range(0, total_folds):
         # lookup n_samples parameter
-        X_train_df[i] = resample(X_main_df, replace=True, n_samples=4, random_state=split_random_state)
+        X_train_df[i], y_train_s[i] = resample(X_main_df, y_main_s, replace=True, n_samples=4, random_state=split_random_state+i)
         X_val_df[i]   = [x for x in X_main_df if x not in X_train_df[i]]  # out of bag observations
         y_val_s[i]    = [y for y in y_main_s  if y not in y_train_s[i] ]  # out of bag observations
     #endfor
