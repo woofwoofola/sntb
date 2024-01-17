@@ -32,21 +32,26 @@ C        =   hp.pchoice('C',
 C2       =   hp.pchoice('C2',
       [(.75, hp.uniform('Csmall2'  ,0.001,20   )),
        (.15, hp.uniform('Cmed2'    ,20   ,100  )),
-       (.1 , hp.uniform('Chigh2'   ,100  ,4000 ))])
+       (.10, hp.uniform('Chigh2'   ,100  ,4000 ))])
 
 Cmu      =  (np.log(10**3) + np.log(10**-1))/3                          
 Csigma   =  (np.log(10**3) - np.log(10**-1))/3                          
 C3       =   hp.lognormal('C3',       Cmu, Csigma) 
 
 C4       =   hp.pchoice('C4',
-       [(.5, hp.uniform('Csmall4'  ,0.0001,5   )),
-        (.5, hp.uniform('Chigh4'   ,5  ,10000 ))])
+       [(.75, hp.uniform('Csmall4'  ,0.001 ,5   )),
+        (.20, hp.uniform('Cmed4'   ,5     ,100   )),
+        (.05, hp.uniform('Chigh4'   ,100   ,4000   ))])
 
 C5       =   hp.pchoice('C5',
       [(.75, hp.uniform('Csmall5'  ,0.1  ,5    )),
        (.25, hp.uniform('Cmed5'    ,5    ,100   ))])
 
-C6       =   hp.uniform('C6'       ,1    ,20    )
+C6       =   hp.pchoice('C6',
+      [(.10, hp.uniform('Ctiny6'  ,0.001 ,0.1  )),
+       (.65, hp.uniform('Csmall6' ,0.1   ,5    )),
+       (.20, hp.uniform('Cmed6'   ,5     ,100  )),
+       (.05, hp.uniform('Chigh6'  ,100   ,4000 ))])
 
 # nsvc hyperparameters
 nu       =   hp.uniform('nu'       ,0.1,  0.35 ) # nsvc; default=0.5

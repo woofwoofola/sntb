@@ -18,7 +18,12 @@ opt_measure  = 'roc_auc'           # main measure for optimization, score to use
 main_cv      = cross_val_score     # main function for cross validation, permits only 1 score
 xgb_cv       = xgbcv
 
-# knn,  defaults: metric='minkowski', p=2, algorithm='auto', leaf_size=30 
+#C_choice        = C5
+#C_choice        = C2
+#C_choice        = C4
+C_choice        = C6
+
+# knn,  defaults: metric='minkowski', p=2, algorithm='auto', leaf_size=30
 #       changes : n_neighbors=k, weights='distance'
 space_knn       = {'n_neighbors':k}
 dictx_knn       = dict(classifier=knn, name='knn', space=space_knn, fixed=[],
@@ -45,7 +50,7 @@ space_logr      = {}
 dictx_logrB     = dict(name  ='logr'  , space=space_logr, fixed=fixed_logr)
 cl = addcl(cl, dictx_logr, dictx_logrB)
 
-space_plogr     = {'C':C}
+space_plogr     = {'C':C_choice}
 fixed_plogr1    = {'penalty':'l1'        ,'class_weight':'balanced','solver':'liblinear'}
 #fixed_plogr1    = {'penalty':'l1'        ,'class_weight':'balanced','solver':'saga'}
 dictx_plogr1    = dict(name  ='plogr1', space=space_plogr, fixed=fixed_plogr1)
@@ -57,12 +62,12 @@ dictx_plogr2    = dict(name  ='plogr2', space=space_plogr, fixed=fixed_plogr2)
 cl = addcl(cl, dictx_logr, dictx_plogr2)
 
 fixed_plogrE    = {'penalty':'elasticnet','class_weight':'balanced','solver':'saga'}
-space_plogrE1   = {'C':C,'l1_ratio':low_ratio}
+space_plogrE1   = {'C':C_choice,'l1_ratio':low_ratio}
 dictx_plogrE1   = dict(name  ='plogrE1', space=space_plogrE1, fixed=fixed_plogrE)
 cl = addcl(cl, dictx_logr, dictx_plogrE1)
 
 #fixed_plogrE as before
-space_plogrE2   = {'C':C,'l1_ratio':high_ratio}
+space_plogrE2   = {'C':C_choice,'l1_ratio':high_ratio}
 dictx_plogrE2   = dict(name  ='plogrE2', space=space_plogrE2, fixed=fixed_plogrE)
 cl = addcl(cl, dictx_logr, dictx_plogrE2)
 
@@ -188,65 +193,62 @@ fixed_svc       = {'coef0':0.0, 'shrinking':False, 'cache_size':3000,
 #                  'class_weight':'balanced', 'probability':False}
 
 dictx_svc       = dict(classifier=svc, measure=opt_measure, fixed=fixed_svc, cv=main_cv)
-
-space_svc_Pwr1  = {'C':C5                                           }
+space_svc_Pwr1  = {'C':C_choice                                     }
 fixed_svc_Pwr1 = {'kernel':Pwr1_kernel, gamma:1}
 dictx_svc_Pwr1  = dict(name='svcPwr1'   , space=space_svc_Pwr1  , fixed2=fixed_svc_Pwr1)
 cl = addcl(cl, dictx_svc, dictx_svc_Pwr1)
 #
-space_svc_Log1  = {'C':C5                                           }
+space_svc_Log1  = {'C':C_choice                                     }
 fixed_svc_Log1  = {'kernel':Log1_kernel, gamma:1}
 dictx_svc_Log1  = dict(name='svcLog1'   , space=space_svc_Log1  , fixed2=fixed_svc_Log1)
 cl = addcl(cl, dictx_svc, dictx_svc_Log1)
 #
-space_svc_Lin   = {'C':C5                                           }
+space_svc_Lin   = {'C':C_choice                                     }
 fixed_svc_Lin   = {'kernel':'linear', 'gamma':1}
 dictx_svc_Lin   = dict(name='svcLin'   , space=space_svc_Lin   , fixed2=fixed_svc_Lin)
 cl = addcl(cl, dictx_svc, dictx_svc_Lin)
 #
-space_svc_RBF   = {'C':C5,           'gamma':gamma                  }
+space_svc_RBF   = {'C':C_choice,      'gamma':gamma                 }
 fixed_svc_RBF   = {'kernel':'rbf'}
 dictx_svc_RBF   = dict(name='svcRBF'   , space=space_svc_RBF   , fixed2=fixed_svc_RBF)
 cl = addcl(cl, dictx_svc, dictx_svc_RBF)
 #
-space_svc_Sig   = {'C':C5,'gamma':siga,                  'coef0':sigr}
+space_svc_Sig   = {'C':C_choice,      'gamma':siga,     'coef0':sigr}
 fixed_svc_Sig   = {'kernel':'sigmoid'}
 dictx_svc_Sig   = dict(name='svcSig'   , space=space_svc_Sig   , fixed2=fixed_svc_Sig)
 cl = addcl(cl, dictx_svc, dictx_svc_Sig)
 #
-space_svc_SigN  = {'C':C5,    'a':sigb,                      'r':sigr}
+space_svc_SigN  = {'C':C_choice,      'a':sigb,             'r':sigr}
 fixed_svc_SigN  = {'kernel':SigN_kernel, 'gamma':1}   # custom kernel hyperparms in space (except C for svc)
 dictx_svc_SigN  = dict(name='svcSigN'  , space=space_svc_SigN  , fixed2=fixed_svc_SigN)
 cl = addcl(cl, dictx_svc, dictx_svc_SigN)
 #
-space_svc_MSig  = {'C':C5,               'b':b    ,          'd':d   }
+space_svc_MSig  = {'C':C_choice,       'b':b    ,          'd':d   }
 fixed_svc_MSig  = {'kernel':MSig_kernel, 'gamma':1}   # custom kernel hyperparms in space (except C for svc)
 dictx_svc_MSig  = dict(name='svcMSig'  , space=space_svc_MSig  , fixed2=fixed_svc_MSig)
 cl = addcl(cl, dictx_svc, dictx_svc_MSig)
 #
-space_svc_MSig0  = {'C':C5,               'b':b }
+space_svc_MSig0  = {'C':C_choice,      'b':b }
 fixed_svc_MSig0  = {'kernel':MSig0_kernel, 'gamma':1}   # custom kernel hyperparms in space (except C for svc)
 dictx_svc_MSig0  = dict(name='svcMSig0'  , space=space_svc_MSig0  , fixed2=fixed_svc_MSig0)
 cl = addcl(cl, dictx_svc, dictx_svc_MSig0)
 #
-space_svc_OISVgc= {'C':C5,    'a':a   ,  'b':b2   , 'c':c,   'd':d   }
+space_svc_OISVgc= {'C':C_choice,'a':a, 'b':b2   , 'c':c,   'd':d   }
 fixed_svc_OISVgc= {'kernel':OISVgc_kernel, 'gamma':1} # custom kernel hyperparms in space (except C for svc)
 dictx_svc_OISVgc= dict(name='svcOISVgc', space=space_svc_OISVgc, fixed2=fixed_svc_OISVgc)
 cl = addcl(cl, dictx_svc, dictx_svc_OISVgc)
 #
-#space_svc_OISVneg= {'C':C5,    'a':a   ,  'b':b2   , 'd':d   }
-space_svc_OISVneg= {'C':C5,    'b':b   }
+space_svc_OISVneg= {'C':C_choice,      'b':b   }
 fixed_svc_OISVneg= {'kernel':OISVneg_kernel, 'gamma':1} # custom kernel hyperparms in space (except C for svc)
 dictx_svc_OISVneg= dict(name='svcOISVneg', space=space_svc_OISVneg, fixed2=fixed_svc_OISVneg)
 cl = addcl(cl, dictx_svc, dictx_svc_OISVneg)
 #
-space_svc_OISVpos= {'C':C5,    'b':b   }
+space_svc_OISVpos= {'C':C_choice,      'b':b   }
 fixed_svc_OISVpos= {'kernel':OISVpos_kernel, 'gamma':1} # custom kernel hyperparms in space (except C for svc)
 dictx_svc_OISVpos= dict(name='svcOISVpos', space=space_svc_OISVpos, fixed2=fixed_svc_OISVpos)
 cl = addcl(cl, dictx_svc, dictx_svc_OISVpos)
 #
-space_svc_OSig  = {'C':C5,               'b':b    , 'c':c            }
-space_svc_OSig  = {'C':C5,               'b':b    , 'c':c            }
+space_svc_OSig  = {'C':C_choice,       'b':b    , 'c':c            }
 fixed_svc_OSig  = {'kernel':OSig_kernel, 'gamma':1}   # custom kernel hyperparms in space (except C for svc)
 dictx_svc_OSig  = dict(name='svcOSig' , space=space_svc_OSig , fixed2=fixed_svc_OSig)
 cl = addcl(cl, dictx_svc, dictx_svc_OSig)
