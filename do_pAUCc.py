@@ -142,21 +142,9 @@ def discrete_deeproc_measures(pfpr, ptpr, plabel, N, P, globalN, globalP, quiet)
                                   / (pi_pos_global * avgtpr     + pi_neg_global * avgfpr))     * (ldelx + ldely)
         sumNPVArea  = sumNPVArea  +((pi_neg_global * (1-avgfpr))
                                   / (pi_neg_global * (1-avgfpr) + pi_pos_global * (1-avgtpr))) * (ldelx + ldely)
-        if avgfpr == 0:
-            sumLRpArea  = np.inf
-        else:
-            sumLRpArea  = sumLRpArea  + (avgtpr / avgfpr)
-        if (1-avgfpr) == 0:
-            sumLRnArea  = np.inf
-        else:
-            sumLRnArea  = sumLRnArea  + ((1-avgtpr) / (1-avgfpr))
-
-        if avgfpr == 0 or (1-avgtpr) == 0:
-            sumORArea   = np.inf
-        elif (1-avgfpr) == 0:
-            sumORArea   = sumORArea + 0
-        else:
-            sumORArea   = sumORArea   + ( (avgtpr / avgfpr) / ((1-avgtpr) / (1-avgfpr)) )
+        # sumLRpArea disabled
+        # sumLRnArea disabled
+        # sumORArea  disabled
 
         delx    = delx + ldelx
         dely    = dely + ldely
@@ -183,15 +171,15 @@ def discrete_deeproc_measures(pfpr, ptpr, plabel, N, P, globalN, globalP, quiet)
 
     sumdel  = delx + dely
     if sumdel == 0:
-        avgBA, avgA, avgPPV, avgNPV, avgLRp, avgLRn, avgOR = [0, 0, 0, 0, 1, 1, 1]
+        avgBA, avgA, avgPPV, avgNPV, avgLRp, avgLRn, avgOR = [0, 0, 0, 0, np.nan, np.nan, np.nan]
     else:
         avgBA   = (1/sumdel)  * sum_BA_Area
         avgA    = (1/sumdel)  * sum_A_Area
         avgPPV  = (1/sumdel)  * sumPPVArea
         avgNPV  = (1/sumdel)  * sumNPVArea
-        avgLRp  = (1/sumdel)  * sumLRpArea
-        avgLRn  = (1/sumdel)  * sumLRnArea
-        avgOR   = (1/sumdel)  * sumORArea
+        avgLRp  = np.nan  # disabled
+        avgLRn  = np.nan  # disabled
+        avgOR   = np.nan  # disabled
     #endif
 
     measures_dict = {'bAvgA': bAvgA, 'avgSens': avgSens, 'avgSpec': avgSpec,
@@ -625,7 +613,10 @@ def interpolateROC(rstat, ostat, thresh, ixL, ixR, interpValue):
 #enddef
 
 def get_Match_or_Interpolation_Points(rstat, endpoint):
-    ''' returns ix, ixL, ixR '''
+    '''Given a numpy array for a range statistic, such as TPR or FPR, this function takes
+       an endpoint as input, and returns the index, ix, in the rstat array with the matching
+       value, or if no match was found, it returns the indices for the two values in the array
+        that need to be interpolated: ixL, ixR. '''
 
     ix = np.argwhere(rstat == endpoint).flatten()  # find matching point, as a flat list
     if len(ix) == 0: # if no matching indices in ix, then interpolate
