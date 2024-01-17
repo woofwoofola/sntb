@@ -28,17 +28,20 @@ import matplotlib.pyplot as plt
 import loess as ml
 import scipy.stats as st
 
-testNum    = 200
+resultsv2  = True
+testNum    = 36
 #model      = 'case'
-model      = 'svcLin'
+model      = 'plogr1'
 reanalysis = ''
 showLoess  = False
 showLines  = False
 dotcolor   = 'orange'
 curvecolor = 'orange'
-iterations = 100
-k_folds    = 10
-repetition = 10
+iterations = 20  # except for the next clause...
+if model == 'logr' or model == 'tpfn':  # these methods have only 1 iteration
+    iterations    = 1
+k_folds    = 1
+repetition = 1
 total_folds= k_folds * repetition
 
 def formatList(alist):
@@ -176,7 +179,7 @@ def plotIteration(plotThis, testNum, model):
     aDeepROC.setFoldsNPclassRatio(foldsNPclassRatio)
     groupAxis = 'TPR'
     # groups = [[0, 0.85], [0.85, 1]]
-    groups = [[0, 0.30], [0.30, 0.92], [0.92, 1]]
+    groups = [[0, 0.60], [0.60, 0.90], [0.90, 1]]
     aDeepROC.setGroupsBy(groupAxis=groupAxis, groups=groups, groupByClosestInstance=False)
 
     costs = dict(cFP=1, cFN=5, cTP=0, cTN=0, costsAreRates=False)  # for ruling-out FN cost is high
@@ -223,27 +226,45 @@ def analyze(testNum, model, iterations):
     else:
         logfn = f'output/deepROCanalysis_{testNum:3d}{reanalysis}_{model}.txt'
         transcript.start(logfn)
-        print(f'results_{testNum:03d}_{model}:')
-        fileHandle   = open(f'output/results_{testNum:03d}{reanalysis}_{model}.pkl', 'rb')
+        if resultsv2:
+            print(f'resultsv2_{testNum:03d}_{model}:')
+            fileHandle   = open(f'output/resultsv2_{testNum:03d}{reanalysis}_{model}.pkl', 'rb')
+        else:
+            print(f'results_{testNum:03d}_{model}:')
+            fileHandle = open(f'output/results_{testNum:03d}{reanalysis}_{model}.pkl', 'rb')
+        #endif
         fileHandleS  = open(f'output/settings_{testNum:03d}.pkl', 'rb')
     #endif
     try:
-        measure_to_optimize, type_to_optimize, deepROC_groups, \
-        groupAxis, areaMeasures, groupMeasures = pickle.load(fileHandleS)
-        fileHandleS.close()
-        areaMatrix, groupMatrix                = pickle.load(fileHandle)
-        fileHandle.close()
+        if resultsv2:
+            measure_to_optimize, type_to_optimize, deepROC_groups, \
+                groupAxis, wholeMeasures, groupMeasures, pointMeasures,\
+                NRIMeasures, NRIMeasures2, ROC_points, NRI_points = pickle.load(fileHandleS)
+            fileHandleS.close()
+            wholeMatrix, groupMatrix, pointMatrix, NRIMatrix, NRIMatrix2, thrMatrix = pickle.load(fileHandle)
+            fileHandle.close()
+        else:
+            measure_to_optimize, type_to_optimize, deepROC_groups, \
+                groupAxis, wholeMeasures, groupMeasures = pickle.load(fileHandleS)
+            fileHandleS.close()
+            wholeMatrix, groupMatrix = pickle.load(fileHandle)
+            fileHandle.close()
     except:
         print('pickle load failed')
         exit(1)
     #endtry
 
     # create indices from above
-    AUC_ix      = areaMeasures.index('AUC')
-    AUC_full_ix = areaMeasures.index('AUC_full')
-    AUC_plain_ix= areaMeasures.index('AUC_plain')
-    AUC_micro_ix= areaMeasures.index('AUC_micro')
-    AUPRC_ix    = areaMeasures.index('AUPRC')
+    AUC_ix      = wholeMeasures.index('AUC')
+    AUC_full_ix = wholeMeasures.index('AUC_full')
+    AUC_plain_ix= wholeMeasures.index('AUC_plain')
+    AUC_micro_ix= wholeMeasures.index('AUC_micro')
+    AUPRC_ix    = wholeMeasures.index('AUPRC')
+    try:
+        special_ix  = wholeMeasures.index('rulein_not_ruleout')
+        special     = True
+    except:
+        special     = False
 
     cDelta_ix   = groupMeasures.index('cDelta')
     cpAUC_ix    = groupMeasures.index('cpAUC')
@@ -255,11 +276,11 @@ def analyze(testNum, model, iterations):
     pAUCn_ix    = groupMeasures.index('pAUCn')
     pAUCxn_ix   = groupMeasures.index('pAUCxn')
 
+    # override loaded names because of old versions of names
     groupMeasures = ['cDelta', 'cpAUC', 'pAUC', 'pAUCx',
                      'cDeltan', 'cpAUCn', 'pAUCn', 'pAUCxn',
                      'avgA', 'bAvgA', 'avgSens', 'avgSpec',
-                     'avgPPV', 'avgNPV',
-                     'avgLRp', 'avgLRn',
+                     'avgPPV', 'avgNPV', 'avgLRp', 'avgLRn',
                      'ubAvgA', 'avgBA', 'sPA']
 
     avgA_ix     = groupMeasures.index('avgA')
@@ -278,10 +299,10 @@ def analyze(testNum, model, iterations):
 
     num_groups         = len(deepROC_groups) + 1
     num_group_measures = len(groupMeasures)
-    num_area_measures  = len(areaMeasures)
+    num_whole_measures  = len(wholeMeasures)
 
     #mean_measure = [None] * total_folds
-    #areaMatrix   = np.zeros(shape=[total_folds, num_area_measures, iterations])
+    #wholeMatrix   = np.zeros(shape=[total_folds, num_whole_measures, iterations])
     #                               5            x5                 x100
     #groupMatrix  = np.zeros(shape=[total_folds, num_groups, num_group_measures, iterations])
     #                               5            x6          x15                 x100 = 270k * 4B = 1.08 MB
@@ -292,6 +313,7 @@ def analyze(testNum, model, iterations):
     # initialize variables
     computed_mean_CI_AUC     = np.zeros([iterations, 2])
     computed_mean_CI_AUPRC   = np.zeros([iterations, 2])
+    computed_mean_CI_special = np.zeros([iterations, 2])
     computed_mean_CI_avgPPV  = np.zeros([iterations, 2])
     computed_mean_CI_avgNPV  = np.zeros([iterations, 2])
     computed_mean_CI_cpAUCni = np.zeros([iterations, 2])
@@ -301,20 +323,22 @@ def analyze(testNum, model, iterations):
 
     # code from https://stackoverflow.com/questions/7568627/using-python-string-formatting-with-lists
     for i in range(0, iterations):
-        print(f'{i:03d}: mean_AUC_full:   {np.mean(is_not_nan(areaMatrix[:, AUC_full_ix, i])):0.4f}')
-        vector = is_not_nan(areaMatrix[:, AUC_ix, i])
+        print(f'{i:03d}: mean_AUC_full:   {np.mean(is_not_nan(wholeMatrix[:, AUC_full_ix, i])):0.4f}')
+        vector = is_not_nan(wholeMatrix[:, AUC_ix, i])
         computed_mean_CI_AUC[i, 0] = np.mean(vector)
-        if total_folds >= 30:
+        if   total_folds >= 30:
             # z = 1.96
             lb, ub = st.norm.interval(alpha=0.95, loc=np.mean(vector), scale=st.sem(vector))
-        else:
+        elif total_folds > 1 and total_folds < 30:
             # for total_folds==10, use z = 2.262
             lb, ub = st.t.interval(alpha=0.95, df=len(vector)-1, loc=np.mean(vector), scale=st.sem(vector))
+        else:
+            lb, ub = 0, 0
         #endif
         computed_mean_CI_AUC[i, 1] = (ub-lb)/2
         # computed_mean_CI_AUC[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
         print(f'     mean_AUC:        {computed_mean_CI_AUC[i, 0]:0.4f}')
-        print(f'     AUC:             {formatList(list(areaMatrix[:, AUC_ix, i]))}')
+        print(f'     AUC:             {formatList(list(wholeMatrix[:, AUC_ix, i]))}')
         print(f'     cDeltan.0:       {formatList(list(groupMatrix[:, 0, cDeltan_ix, i]))}')
         print(f'     bAvgA.0:         {formatList(list(groupMatrix[:, 0, bAvgA_ix, i]))}')
         print(f'     cpAUC.0:         {formatList(list(groupMatrix[:, 0, cpAUC_ix, i]))}')
@@ -325,21 +349,40 @@ def analyze(testNum, model, iterations):
         # show cp.AUC.sum across folds
         print(f'     cpAUC.sum:       {formatList(list(temp))}')
 
-        print(' ')
-        vector = is_not_nan(areaMatrix[:, AUPRC_ix, i])
+        if special:
+            vector = is_not_nan(wholeMatrix[:, special_ix, i])
+            computed_mean_CI_special[i, 0] = np.mean(vector)
+            if total_folds > 1:
+                computed_mean_CI_special[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+            else:
+                computed_mean_CI_special[i, 1] = 0
+            print(f'rulein_not_ruleout:  {computed_mean_CI_special[i, 0]:0.4f}')
+        #endif
+
+        vector = is_not_nan(wholeMatrix[:, AUPRC_ix, i])
         computed_mean_CI_AUPRC[i, 0] = np.mean(vector)
-        computed_mean_CI_AUPRC[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        if total_folds > 1:
+            computed_mean_CI_AUPRC[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        else:
+            computed_mean_CI_AUPRC[i, 1] = 0
         print(f'     mean_AUPRC:      {computed_mean_CI_AUPRC[i, 0]:0.4f}')
+
         vector = is_not_nan(groupMatrix[:, 0, avgPPV_ix, i])
         computed_mean_CI_avgPPV[i, 0] = np.mean(vector)
-        computed_mean_CI_avgPPV[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        if total_folds > 1:
+            computed_mean_CI_avgPPV[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        else:
+            computed_mean_CI_avgPPV[i, 1] = 0
         print(f'     mean_avgPPV.0:   {computed_mean_CI_avgPPV[i, 0]:0.4f}')
-        print(f'     AUPRC:           {formatList(list(areaMatrix[:, AUPRC_ix, i]))}')
+        print(f'     AUPRC:           {formatList(list(wholeMatrix[:, AUPRC_ix, i]))}')
         print(f'     avgPPV.0:        {formatList(list(groupMatrix[:, 0, avgPPV_ix, i]))}')
         print(' ')
         vector = is_not_nan(groupMatrix[:, 0, avgNPV_ix, i])
         computed_mean_CI_avgNPV[i, 0] = np.mean(vector)
-        computed_mean_CI_avgNPV[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        if total_folds > 1:
+            computed_mean_CI_avgNPV[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+        else:
+            computed_mean_CI_avgNPV[i, 1] = 0
         print(f'     mean_avgNPV.0:   {computed_mean_CI_avgNPV[i, 0]:0.4f}')
         print(f'     avgNPV.0:        {formatList(list(groupMatrix[:, 0, avgNPV_ix, i]))}')
         print(' ')
@@ -356,7 +399,10 @@ def analyze(testNum, model, iterations):
             if g == ROIindex:
                 vector = is_not_nan(groupMatrix[:, g, cpAUCn_ix, i])  # groupMatrix is always 0-indexed
                 computed_mean_CI_cpAUCni[i, 0] = np.mean(vector)
-                computed_mean_CI_cpAUCni[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+                if total_folds > 1:
+                    computed_mean_CI_cpAUCni[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+                else:
+                    computed_mean_CI_cpAUCni[i, 1] = 0
                 print(f'     mean_cpAUCn.{g}:   {computed_mean_CI_cpAUCni[i, 0]:0.4f}')
             else:
                 print(f'     mean_cpAUCn.{g}:   {np.mean(is_not_nan(groupMatrix[:, g, cpAUCn_ix, i])):0.4f}')
@@ -367,7 +413,10 @@ def analyze(testNum, model, iterations):
             if g == 1:
                 vector = is_not_nan(groupMatrix[:, g, pAUCn_ix, i])
                 computed_mean_CI_pAUCn1[i, 0] = np.mean(vector)
-                computed_mean_CI_pAUCn1[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+                if total_folds > 1:
+                    computed_mean_CI_pAUCn1[i, 1] = 2.262 * np.std(vector, ddof=1) / np.sqrt(len(vector))
+                else:
+                    computed_mean_CI_pAUCn1[i, 1] = 0
                 print(f'     mean_pAUCn.1:    {computed_mean_CI_pAUCn1[i, 0]:0.4f}')
             else:
                 print(f'     mean_pAUCn.{g}:    {np.mean(is_not_nan(groupMatrix[:, g, pAUCn_ix, i])):0.4f}')
@@ -381,7 +430,8 @@ def analyze(testNum, model, iterations):
         #print(f'     group0_measFold0: {formatList(list(groupMatrix[0,0,:,i]))}')
     #endfor
 
-    myround = lambda a: round(10000*np.max(a))/100  # as percentage, rounded to 2nd decimal place
+    print(' ')
+    myround = lambda a: round(10000.0*np.max(a))/100.0  # as percentage, rounded to 2nd decimal place
     j    = np.argmax(computed_mean_CI_AUC[:, 0])
     print(f'Max mean_AUC     {myround(computed_mean_CI_AUC[j, 0]):0.2f} '
           f'+/- {myround(computed_mean_CI_AUC[j, 1]):0.2f} is at index {j}')
